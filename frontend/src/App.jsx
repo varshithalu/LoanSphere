@@ -1,9 +1,4 @@
-import {
-  Routes,
-  Route,
-  BrowserRouter as Router,
-  Navigate,
-} from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -31,14 +26,14 @@ function App() {
             </PrivateRoute>
           }
         />
-        {/* <Route
+        <Route
           path="/apply"
           element={
             <PrivateRoute>
               <LoanApplication />
             </PrivateRoute>
           }
-        /> */}
+        />
         <Route
           path="/dashboard/apply-loan"
           element={

@@ -49,18 +49,20 @@ const Login = () => {
       <input
         type="text"
         name="username"
-        value={form.username}
+        value={form.username || ""}
         onChange={handleChange}
         placeholder="Username"
+        autoComplete="username"
         className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         required
       />
       <input
         type="password"
         name="password"
-        value={form.password}
+        value={form.password || ""}
         onChange={handleChange}
         placeholder="Password"
+        autoComplete="current-password"
         className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         required
       />

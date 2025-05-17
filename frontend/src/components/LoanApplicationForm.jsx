@@ -19,8 +19,8 @@ const LoanApplicationForm = () => {
         });
         setForm((prev) => ({
           ...prev,
-          name: res.data.name,
-          email: res.data.email,
+          name: res.data.name || "",
+          email: res.data.email || "",
         }));
       } catch (err) {
         console.error("Failed to prefill user info:", err);
@@ -34,15 +34,14 @@ const LoanApplicationForm = () => {
       {/* Example pre-filled inputs */}
       <input
         type="text"
-        value={form.name}
+        value={form.name ?? ""}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
       />
       <input
         type="email"
-        value={form.email}
+        value={form.email ?? ""}
         onChange={(e) => setForm({ ...form, email: e.target.value })}
       />
-      {/* more fields... */}
     </form>
   );
 };
