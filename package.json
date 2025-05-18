@@ -1,0 +1,21 @@
+{
+  "name": "major",
+  "version": "1.0.0",
+  "main": "index.cjs",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.cjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "express": "^5.1.0",
+    "moment": "^2.30.1",
+    "mongoose": "^8.15.0",
+    "node-cron": "^4.0.5",
+    "nodemailer": "^7.0.3"
+  }
+}
