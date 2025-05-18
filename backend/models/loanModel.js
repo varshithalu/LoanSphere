@@ -35,8 +35,16 @@ const loanSchema = new mongoose.Schema({
   amount: { type: Number, required: true },
   tenure: { type: Number, required: true }, // in months
   kycUrl: { type: String },
-  status: { type: String, default: "pending" },
-  aiDecision: { type: String, default: "pending" },
+  ai_decision: {
+    type: String,
+    enum: ["approved", "conditional", "rejected"],
+    default: "pending",
+  },
+  status: {
+    type: String,
+    enum: ["pending", "approved", "rejected"],
+    default: "pending",
+  },
   createdAt: { type: Date, default: Date.now },
 });
 

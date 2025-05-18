@@ -38,7 +38,7 @@ function App() {
           path="/dashboard/apply-loan"
           element={
             <PrivateRoute>
-              <LoanApplicationForm />
+              <LoanApplication />
             </PrivateRoute>
           }
         />

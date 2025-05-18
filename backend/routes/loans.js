@@ -6,6 +6,16 @@ const loanController = require("../controllers/loanController");
 const verifyToken = require("../middlewares/authMiddleware").verifyToken;
 const authorizeRoles = require("../middlewares/roleMiddleware");
 
+const axios = require("axios");
+
+const prediction = await axios.post("http://localhost:5000/predict", {
+  age: 30,
+  income: 500000,
+  loan_amount: 300000,
+});
+
+const riskStatus = prediction.data.result; // approved / conditional / rejected
+
 // ─────────────── POST /api/loans/apply ───────────────
 router.post(
   "/apply",

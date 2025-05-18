@@ -1,99 +1,120 @@
-// const loanModel = require('../models/loanModel');
-// const aiService = require('../services/aiService');
-// const generateSanctionLetter = require('../utils/generateSanctionLetter');
-
-// exports.applyLoan = async (req, res) => {
-//   const { amount, tenure } = req.body;
-//   const kycUrl = req.file ? req.file.path : null;
-//   const aiDecision = aiService.evaluateRisk({ amount, tenure });
-
-//   const { rows } = await loanModel.createLoan(req.user.id, amount, tenure, kycUrl, aiDecision);
-//   res.json(rows[0]);
-// };
-
-// exports.getAllLoans = async (req, res) => {
-//   const { rows } = await loanModel.getAllLoans();
-//   res.json(rows);
-// };
-
-// exports.approveLoan = async (req, res) => {
-//   const { loanId } = req.params;
-//   const { status } = req.body;
-
-//   const { rows } = await loanModel.updateLoanStatus(loanId, status);
-//   const sanctionLetter = generateSanctionLetter(rows[0]);
-
-//   res.json({ updated: rows[0], sanctionLetter });
-// };
-const Loan = require("../models/loanModel");
-const multer = require("multer");
 const path = require("path");
+const multer = require("multer");
+const axios = require("axios");
+const Loan = require("../models/loanModel");
 
-// Multer config for KYC upload
+/* ------------------------------------------------------------------
+   1.  File‑upload (Multer) setup  ➜  exports.uploadMiddleware
+------------------------------------------------------------------ */
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/");
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
+  destination: (_, __, cb) => cb(null, "uploads/"),
+  filename: (_, file, cb) =>
+    cb(null, `${Date.now()}${path.extname(file.originalname)}`),
 });
 const upload = multer({ storage });
+exports.uploadMiddleware = upload.single("kyc"); // form‑data field name = kyc
 
-exports.uploadMiddleware = upload.single("kyc");
+/* ------------------------------------------------------------------
+   2.  Rule‑based AI helper (fallback)
+------------------------------------------------------------------ */
+const getAIDecision = (amount) => {
+  if (amount < 50000) return "approved";
+  if (amount > 200000) return "rejected";
+  return "conditional";
+};
 
+/* ------------------------------------------------------------------
+   3. Call Flask ML API
+------------------------------------------------------------------ */
+async function callCreditRiskAssessment(borrowerData) {
+  try {
+    const response = await axios.post(
+      "http://localhost:5000/predict",
+      borrowerData
+    );
+    return response.data.result; // "approved", "conditional", or "rejected"
+  } catch (err) {
+    console.error("ML service error:", err.message);
+    return "manual"; // fallback if prediction fails
+  }
+}
+
+/* ------------------------------------------------------------------
+   4. Borrower ➜ POST /api/loan/apply
+       Apply for loan with ML decision integration
+------------------------------------------------------------------ */
 exports.applyLoan = async (req, res) => {
   try {
     const { amount, tenure } = req.body;
-    const kycUrl = req.file ? req.file.path : null;
-
-    // Validate required fields
     if (!amount || !tenure) {
       return res
         .status(400)
         .json({ message: "Amount and tenure are required" });
     }
 
-    // Convert amount and tenure to numbers (since they come from form-data)
     const amountNum = Number(amount);
     const tenureNum = Number(tenure);
 
-    // AI Decision logic
-    let aiDecision = "reject"; // default
-    if (amountNum <= 500000 && tenureNum <= 12) {
-      aiDecision = "approve";
-    } else if (amountNum <= 1000000 && tenureNum <= 24) {
-      aiDecision = "conditional";
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ message: "User not authenticated" });
     }
 
-    const loan = new Loan({
-      userId: req.user.id,
+    // Prepare data to send to ML service
+    const borrowerData = {
+      Age: user.age,
+      Gender: user.gender,
+      "Employment Type": user.employmentType,
+      "Annual Income": user.annualIncome,
+      "Loan Amount Requested": amountNum,
+      "Loan Tenure (Months)": tenureNum,
+      "Previous Loans Taken": user.prevLoans,
+      "Previous Loan Defaults": user.prevDefaults,
+      "Existing Loan Amounts": user.existingLoanAmount,
+      "Debt-to-Income Ratio": user.dti,
+      "Missed EMI Payments": user.missedEmis,
+      "Late Payment Charges": user.lateCharges,
+      "Credit Score": user.creditScore,
+      "Loan Type": user.loanType,
+    };
+
+    // Call ML microservice for AI decision
+    let aiDecision = await callCreditRiskAssessment(borrowerData);
+
+    // Fallback to rule-based if ML fails
+    if (aiDecision === "manual") {
+      aiDecision = getAIDecision(amountNum);
+    }
+
+    // Create loan with AI decision and status
+    const loan = await Loan.create({
+      userId: user.id,
       amount: amountNum,
       tenure: tenureNum,
-      kycUrl,
-      aiDecision,
-      status: "pending",
+      kycUrl: req.file ? `/uploads/${req.file.filename}` : null,
+      ai_decision: aiDecision,
+      status: aiDecision === "approved" ? "approved" : "pending",
     });
 
-    await loan.save();
-
-    res.status(201).json({ message: "Loan application submitted", loan });
+    res
+      .status(201)
+      .json({ message: "Loan application submitted", aiDecision, loan });
   } catch (err) {
-    console.error(err);
+    console.error("Loan apply error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-// user dashboard api -- user loanlist.jsx
+/* ------------------------------------------------------------------
+   5. Borrower ➜ GET /api/loan/my  (list own loans)
+------------------------------------------------------------------ */
 exports.getUserLoans = async (req, res) => {
   try {
-    const userId = req.user.id;
     const { status, sortBy } = req.query;
-
-    let filter = { userId };
+    const filter = { userId: req.user.id };
     if (status) filter.status = status;
 
-    let sort = {};
+    const sort = {};
     if (sortBy === "amount") sort.amount = -1;
     else if (sortBy === "date") sort.createdAt = -1;
 
@@ -104,15 +125,43 @@ exports.getUserLoans = async (req, res) => {
   }
 };
 
-// loan view page api -- loan detail.jsx
+/* ------------------------------------------------------------------
+   6. Borrower ➜ GET /api/loan/:id  (loan detail)
+------------------------------------------------------------------ */
 exports.getLoanById = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const loan = await Loan.findOne({ _id: req.params.id, userId });
-
+    const loan = await Loan.findOne({
+      _id: req.params.id,
+      userId: req.user.id,
+    });
     if (!loan) return res.status(404).json({ message: "Loan not found" });
-
     res.json(loan);
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+/* ------------------------------------------------------------------
+   7. Admin / Officer ➜ PUT /api/loan/:loanId/decision
+       Manual override of AI decision
+------------------------------------------------------------------ */
+exports.updateLoanDecision = async (req, res) => {
+  try {
+    const { loanId } = req.params;
+    const { newDecision } = req.body;
+
+    const allowed = ["approved", "conditional", "rejected"];
+    if (!allowed.includes(newDecision))
+      return res.status(400).json({ message: "Invalid decision value" });
+
+    const updated = await Loan.findByIdAndUpdate(
+      loanId,
+      { ai_decision: newDecision, status: newDecision },
+      { new: true }
+    );
+
+    if (!updated) return res.status(404).json({ message: "Loan not found" });
+    res.json({ message: "AI decision updated", loan: updated });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
