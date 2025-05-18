@@ -22,3 +22,13 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+
+/frontend/node_modules
+.env
+.env.local
+
+/backend/node_modules
+/.env
+
+commands.txt
