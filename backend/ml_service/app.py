@@ -19,9 +19,10 @@ FEATURE_COLUMNS = [
     "Loan Amount Requested", "Loan Tenure (Months)",
     "Previous Loans Taken", "Previous Loan Defaults",
     "Existing Loan Amounts", "Debt-to-Income Ratio",
-    "Missed EMI Payments", "Late Payment Charges",
-    "Credit Score", "Loan Type"
+    "Monthly EMI","Missed EMI Payments", "Late Payment Charges",
+    "Loan Type"                 
 ]
+
 
 @app.route("/predict", methods=["POST"])
 def predict():

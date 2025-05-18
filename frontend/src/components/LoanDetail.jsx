@@ -1,28 +1,33 @@
-// components/LoanDetail.jsx
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import ManualOverrideForm from "./ManualOverrideForm";
 
 const LoanDetail = () => {
   const { id } = useParams();
   const [loan, setLoan] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchLoan = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`/api/user/loan/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setLoan(res.data);
+    } catch (err) {
+      console.error("Error fetching loan:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchLoan = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get(`/api/user/loan/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setLoan(res.data);
-      } catch (err) {
-        console.error("Error fetching loan:", err);
-      }
-    };
     fetchLoan();
   }, [id]);
 
-  if (!loan) return <div className="p-6">Loading...</div>;
+  if (loading) return <div className="p-6">Loading...</div>;
+  if (!loan) return <div className="p-6">Loan not found</div>;
 
   return (
     <div className="p-6 max-w-2xl mx-auto bg-white shadow rounded">
@@ -43,7 +48,55 @@ const LoanDetail = () => {
       <p>
         <strong>Interest Rate:</strong> {loan.interestRate}%
       </p>
-      <p>
+
+      {/* AI Decision Section */}
+      <div className="mt-6 p-4 bg-gray-100 rounded">
+        <h3 className="font-semibold mb-2">AI Credit Risk Assessment</h3>
+        <p>
+          <strong>Decision:</strong> {loan.aiDecision || "N/A"}
+        </p>
+        <p>
+          <strong>Confidence Score:</strong> {loan.aiConfidenceScore ?? "N/A"}
+        </p>
+      </div>
+
+      {/* Manual Override Section */}
+      <div className="mt-6 p-4 bg-yellow-100 rounded">
+        <h3 className="font-semibold mb-2">Manual Override</h3>
+        {loan.manualOverride ? (
+          <div>
+            <p>
+              <strong>Decision:</strong> {loan.manualOverride.overrideDecision}
+            </p>
+            <p>
+              <strong>Reason:</strong> {loan.manualOverride.overrideReason}
+            </p>
+            <p>
+              <strong>Overridden By:</strong>{" "}
+              {loan.manualOverride.overriddenBy || "Admin"}
+            </p>
+            <p>
+              <strong>At:</strong>{" "}
+              {new Date(loan.manualOverride.overrideTimestamp).toLocaleString()}
+            </p>
+          </div>
+        ) : (
+          <p>No manual override applied yet.</p>
+        )}
+
+        {/* Show ManualOverrideForm only for admin users */}
+        {/* You can replace this with your own auth logic */}
+        {localStorage.getItem("role") === "admin" && (
+          <ManualOverrideForm
+            loanId={loan._id}
+            currentOverride={loan.manualOverride}
+            onUpdate={fetchLoan}
+          />
+        )}
+      </div>
+
+      {/* Rest of your existing loan details */}
+      <p className="mt-4">
         <strong>Repayment Schedule:</strong>
       </p>
       <ul className="list-disc pl-5">

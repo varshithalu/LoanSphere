@@ -26,3 +26,11 @@ app.get("/", (_, res) => res.send("API is running"));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+// Admin routes
+const dashboardRoutes = require("./routes/dashboard");
+app.use("/api/dashboard", dashboardRoutes);
+
+// loan override routes
+const loanOverrideRoutes = require("./routes/loanOverride");
+app.use("/loans", loanOverrideRoutes);

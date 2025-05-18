@@ -2,7 +2,7 @@ npx nodemon server.js
 
 npm run dev
 
-python train_mode.py
+python train_model.py
 python app.py
 
 
