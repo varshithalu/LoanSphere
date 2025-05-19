@@ -2,7 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const Loan = require("../models/loanModel"); // your Loan model
-const { verifyAdminOrOfficer } = require("../middlewares/authMiddleware"); // middleware to check role
+const { verifyAdminOrOfficer } = require("../middleware/authMiddleware"); // middleware to check role
 
 // POST /loans/:loanId/override
 router.post("/:loanId/override", verifyAdminOrOfficer, async (req, res) => {

@@ -10,8 +10,8 @@ const {
   updateLoanDecision,
 } = require("../controllers/loanController");
 
-const { verifyToken } = require("../middlewares/authMiddleware");
-const authorizeRoles = require("../middlewares/roleMiddleware");
+const { verifyToken } = require("../middleware/authMiddleware");
+const authorizeRoles = require("../middleware/roleMiddleware");
 
 // ───────── POST /api/loan/apply ─────────
 router.post(

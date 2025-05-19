@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Loan = require("../models/loanModel");
-const { authAdmin } = require("../middlewares/authMiddleware");
+const { authAdmin } = require("../middleware/authMiddleware");
 
 // GET all loans with optional filters
 router.get("/loans", authAdmin, async (req, res) => {
