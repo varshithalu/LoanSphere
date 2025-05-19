@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Loan Applications Dashboard</title>
+</head>
+
+<body>
+    <h1>Loan Applications</h1>
+    <table border="1" cellpadding="8">
+        <thead>
+            <tr>
+                <th>Applicant Name</th>
+                <th>Loan Amount</th>
+                <th>Status</th>
+                <th>Applied Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% applications.forEach(app=> { %>
+                <tr>
+                    <td>
+                        <%= app.applicantName %>
+                    </td>
+                    <td>
+                        <%= app.loanAmount %>
+                    </td>
+                    <td>
+                        <%= app.status %>
+                    </td>
+                    <td>
+                        <%= new Date(app.appliedDate).toLocaleString() %>
+                    </td>
+                </tr>
+                <% }) %>
+        </tbody>
+    </table>
+</body>
+
+</html>
