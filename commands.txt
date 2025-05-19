@@ -7,5 +7,4 @@ python app.py
 
 
 
-jwt token = 
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4MjVmNmFkYmJiYmFmZWE4MmY1NjNjMCIsInJvbGUiOiJib3Jyb3dlciIsImlhdCI6MTc0NzMxODQ2OSwiZXhwIjoxNzQ3MzI1NjY5fQ._KM_nIwmRmPwVUMzHRb0PQWRrq79x7FY7sjZHIxIv98"
+.\venv\Scripts\Activate
