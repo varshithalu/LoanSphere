@@ -2,11 +2,11 @@ const moment = require('moment');
 const express = require('express');
 const mongoose = require('mongoose');
 const cron = require('node-cron');
-const Loan = require('./Loan');
-const Repayment = require('./Repayment');
+const Loan = require('./Loan');          // Correct: same folder
+const Repayment = require('./Repayment'); // Correct: same folder
+const Application = require('./Application'); // Fixed: remove extra ./models/
 
-const Application = require('./models/Application');
-const sendReminder = require('./mailer'); // Not yet used
+const sendReminder = require('../mailer'); // Assuming mailer.js is one level up
 
 const app = express();
 app.use(express.json());
