@@ -2,65 +2,56 @@ const path = require("path");
 const multer = require("multer");
 const axios = require("axios");
 const Loan = require("../models/loanModel");
+const fs = require("fs");
+require("dotenv").config();
 
-/* ------------------------------------------------------------------
-   1.  File‑upload (Multer) setup  ➜  exports.uploadMiddleware
------------------------------------------------------------------- */
+const ML_URL = process.env.ML_URL || "http://localhost:8000/predict";
+
+/* ---------- Multer upload (single 'kyc' file) ---------- */
 const storage = multer.diskStorage({
   destination: (_, __, cb) => cb(null, "uploads/"),
   filename: (_, file, cb) =>
     cb(null, `${Date.now()}${path.extname(file.originalname)}`),
 });
-const upload = multer({ storage });
-exports.uploadMiddleware = upload.single("kyc"); // form‑data field name = kyc
+exports.uploadMiddleware = multer({ storage }).single("kyc");
 
-/* ------------------------------------------------------------------
-   2.  Rule‑based AI helper (fallback)
------------------------------------------------------------------- */
+/* ---------- Simple rule‑based fallback ---------- */
 const getAIDecision = (amount) => {
   if (amount < 50000) return "approved";
   if (amount > 200000) return "rejected";
   return "conditional";
 };
 
-/* ------------------------------------------------------------------
-   3. Call Flask ML API
------------------------------------------------------------------- */
+/* ---------- Call ML micro‑service ---------- */
 async function callCreditRiskAssessment(borrowerData) {
   try {
-    const response = await axios.post(
-      "http://localhost:5000/predict",
-      borrowerData
-    );
-    return response.data.result; // "approved", "conditional", or "rejected"
+    const { data } = await axios.post(ML_URL, borrowerData, { timeout: 6000 });
+    return data?.result; // "approved" | "conditional" | "rejected"
   } catch (err) {
-    console.error("ML service error:", err.message);
-    return "manual"; // fallback if prediction fails
+    console.error("❌  ML service error:", err.message);
+    return "manual"; // fall back
   }
 }
 
-/* ------------------------------------------------------------------
-   4. Borrower ➜ POST /api/loan/apply
-       Apply for loan with ML decision integration
------------------------------------------------------------------- */
+/* ========================================================
+   POST /api/loan/apply   (Borrower)
+======================================================== */
 exports.applyLoan = async (req, res) => {
   try {
     const { amount, tenure } = req.body;
-    if (!amount || !tenure) {
+    const amountNum = +amount;
+    const tenureNum = +tenure;
+
+    if (!amountNum || !tenureNum)
       return res
         .status(400)
-        .json({ message: "Amount and tenure are required" });
-    }
-
-    const amountNum = Number(amount);
-    const tenureNum = Number(tenure);
+        .json({ message: "Valid amount and tenure are required" });
 
     const user = req.user;
-    if (!user) {
+    if (!user)
       return res.status(401).json({ message: "User not authenticated" });
-    }
 
-    // Prepare data to send to ML service
+    /* --- prepare payload for ML --- */
     const borrowerData = {
       Age: user.age,
       Gender: user.gender,
@@ -78,21 +69,17 @@ exports.applyLoan = async (req, res) => {
       "Loan Type": user.loanType,
     };
 
-    // Call ML microservice for AI decision
+    /* --- AI decision --- */
     let aiDecision = await callCreditRiskAssessment(borrowerData);
+    if (aiDecision === "manual") aiDecision = getAIDecision(amountNum);
 
-    // Fallback to rule-based if ML fails
-    if (aiDecision === "manual") {
-      aiDecision = getAIDecision(amountNum);
-    }
-
-    // Create loan with AI decision and status
+    /* --- store loan --- */
     const loan = await Loan.create({
       userId: user.id,
       amount: amountNum,
       tenure: tenureNum,
       kycUrl: req.file ? `/uploads/${req.file.filename}` : null,
-      ai_decision: aiDecision,
+      aiDecision,
       status: aiDecision === "approved" ? "approved" : "pending",
     });
 
@@ -100,23 +87,26 @@ exports.applyLoan = async (req, res) => {
       .status(201)
       .json({ message: "Loan application submitted", aiDecision, loan });
   } catch (err) {
-    console.error("Loan apply error:", err);
+    console.error("🔥  Loan apply error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-/* ------------------------------------------------------------------
-   5. Borrower ➜ GET /api/loan/my  (list own loans)
------------------------------------------------------------------- */
+/* ========================================================
+   GET /api/loan/my   (Borrower list)
+======================================================== */
 exports.getUserLoans = async (req, res) => {
   try {
     const { status, sortBy } = req.query;
     const filter = { userId: req.user.id };
     if (status) filter.status = status;
 
-    const sort = {};
-    if (sortBy === "amount") sort.amount = -1;
-    else if (sortBy === "date") sort.createdAt = -1;
+    const sort =
+      sortBy === "amount"
+        ? { amount: -1 }
+        : sortBy === "date"
+        ? { createdAt: -1 }
+        : {};
 
     const loans = await Loan.find(filter).sort(sort);
     res.json(loans);
@@ -125,9 +115,9 @@ exports.getUserLoans = async (req, res) => {
   }
 };
 
-/* ------------------------------------------------------------------
-   6. Borrower ➜ GET /api/loan/:id  (loan detail)
------------------------------------------------------------------- */
+/* ========================================================
+   GET /api/loan/:id   (Borrower detail)
+======================================================== */
 exports.getLoanById = async (req, res) => {
   try {
     const loan = await Loan.findOne({
@@ -141,10 +131,9 @@ exports.getLoanById = async (req, res) => {
   }
 };
 
-/* ------------------------------------------------------------------
-   7. Admin / Officer ➜ PUT /api/loan/:loanId/decision
-       Manual override of AI decision
------------------------------------------------------------------- */
+/* ========================================================
+   PUT /api/loan/:loanId/decision   (Admin/Officer override)
+======================================================== */
 exports.updateLoanDecision = async (req, res) => {
   try {
     const { loanId } = req.params;
@@ -154,14 +143,43 @@ exports.updateLoanDecision = async (req, res) => {
     if (!allowed.includes(newDecision))
       return res.status(400).json({ message: "Invalid decision value" });
 
-    const updated = await Loan.findByIdAndUpdate(
-      loanId,
-      { ai_decision: newDecision, status: newDecision },
-      { new: true }
-    );
+    const loan = await Loan.findById(loanId);
+    if (!loan) return res.status(404).json({ message: "Loan not found" });
 
-    if (!updated) return res.status(404).json({ message: "Loan not found" });
-    res.json({ message: "AI decision updated", loan: updated });
+    /* mark as manual override */
+    loan.aiDecision = "manual";
+    loan.status = newDecision;
+    loan.manualOverride = {
+      overriddenBy: req.user.id,
+      overrideDecision: newDecision,
+      overrideReason: req.body.reason || "Manual override",
+      overrideTimestamp: new Date(),
+    };
+    await loan.save();
+
+    res.json({ message: "Loan decision overridden manually", loan });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+/* ========================================================
+   DELETE /api/loan/:id   (Admin/Officer delete)  
+======================================================== */
+exports.deleteLoan = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const loan = await Loan.findByIdAndDelete(id);
+    if (!loan) return res.status(404).json({ message: "Loan not found" });
+
+    // Delete KYC file if it exists
+    if (loan.kycUrl) {
+      const filePath = path.join(__dirname, "../..", loan.kycUrl);
+      fs.unlink(filePath, (err) => {
+        if (err) console.error("Error deleting file:", err);
+      });
+    }
+
+    res.json({ message: "Loan deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }

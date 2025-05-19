@@ -1,54 +1,43 @@
-// const mongoose = require("mongoose");
-
-// const loanSchema = new mongoose.Schema({
-//   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-//   amount: { type: Number, required: true },
-//   tenure: { type: Number, required: true }, // in months
-//   kycUrl: { type: String },
-//   ai_decision: {
-//     type: String,
-//     enum: ["approved", "conditional", "rejected"],
-//     default: "pending",
-//   },
-//   status: {
-//     type: String,
-//     enum: ["pending", "approved", "rejected"],
-//     default: "pending",
-//   },
-//   createdAt: { type: Date, default: Date.now },
-// });
-
-// module.exports = mongoose.model("Loan", loanSchema);
-
 const mongoose = require("mongoose");
 
-const loanSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  amount: { type: Number, required: true },
-  tenure: { type: Number, required: true }, // in months
-  kycUrl: { type: String },
-  ai_decision: {
-    type: String,
-    enum: ["approved", "conditional", "rejected"],
-    default: "pending",
-  },
-  aiConfidenceScore: Number, // optional
-  status: {
-    type: String,
-    enum: ["pending", "approved", "rejected"],
-    default: "pending",
-  },
-  manualOverride: {
-    overriddenBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    overrideDecision: {
-      type: String,
-      enum: ["approved", "rejected", "conditional"],
-      default: null,
+const loanSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
-    overrideReason: String,
-    overrideTimestamp: Date,
+    amount: { type: Number, required: true },
+    tenure: { type: Number, required: true }, // in months
+    kycUrl: String,
+
+    /* ---------- AI result ---------- */
+    aiDecision: {
+      type: String,
+      enum: ["approved", "conditional", "rejected", "manual"],
+      default: "manual",
+    },
+    aiConfidenceScore: Number, // optional
+
+    /* ---------- Current loan state ---------- */
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected", "conditional"],
+      default: "pending",
+    },
+
+    /* ---------- Manual overrides ---------- */
+    manualOverride: {
+      overriddenBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      overrideDecision: {
+        type: String,
+        enum: ["approved", "rejected", "conditional"],
+      },
+      overrideReason: String,
+      overrideTimestamp: Date,
+    },
   },
-  createdAt: { type: Date, default: Date.now },
-});
+  { timestamps: true }
+);
 
 module.exports = mongoose.model("Loan", loanSchema);

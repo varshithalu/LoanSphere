@@ -7,6 +7,8 @@ import LoanApplicationForm from "./components/LoanApplicationForm";
 import Logout from "./components/Logout";
 import PrivateRoute from "./components/PrivateRoute";
 import Navbar from "./components/Navbar";
+// src/App.jsx or your router config
+import OfficerDashboard from "./pages/OfficerDashboard";
 
 function App() {
   return (
@@ -17,7 +19,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/logout" element={<Logout />} />
-
+        <Route path="/dashboard/officer" element={<OfficerDashboard />} />
         <Route
           path="/dashboard"
           element={
