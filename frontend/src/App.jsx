@@ -44,6 +44,22 @@ function App() {
             </PrivateRoute>
           }
         />
+        <Route
+          path="/dashboard/borrower"
+          element={
+            <PrivateRoute role="borrower">
+              <BorrowerDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/loan/:id"
+          element={
+            <PrivateRoute role={["borrower", "officer", "admin"]}>
+              <LoanDetail />
+            </PrivateRoute>
+          }
+        />
       </Routes>
     </>
   );

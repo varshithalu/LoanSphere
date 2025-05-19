@@ -6,5 +6,5 @@ python train_model.py
 python app.py
 
 
-
-.\venv\Scripts\Activate
+.\venv\Scripts\activate
+python app.py
