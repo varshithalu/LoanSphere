@@ -2,13 +2,15 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
+import OfficerDashboard from "./pages/OfficerDashboard";
+import BorrowerDashboard from "./components/BorrowerDashboard"; // <-- Added this import
+import LoanDetail from "./components/LoanDetail"; // <-- Added if this component exists
+
 import LoanApplication from "./components/LoanApplication";
 import LoanApplicationForm from "./components/LoanApplicationForm";
 import Logout from "./components/Logout";
 import PrivateRoute from "./components/PrivateRoute";
 import Navbar from "./components/Navbar";
-// src/App.jsx or your router config
-import OfficerDashboard from "./pages/OfficerDashboard";
 
 function App() {
   return (

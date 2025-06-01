@@ -1,7 +1,10 @@
+cd backend
 npx nodemon server.js
 
+cd frontend
 npm run dev
 
+cd backend/ml_service
 python train_model.py
 python app.py
 

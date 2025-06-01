@@ -4,7 +4,6 @@ import axios from "axios";
 import ManualOverrideForm from "./ManualOverrideForm";
 import dayjs from "dayjs";
 
-// Format helpers
 const fmt = (d) => dayjs(d).format("DD MMM YYYY");
 const money = (n) =>
   Intl.NumberFormat("en-IN", {
@@ -16,6 +15,7 @@ const LoanDetail = () => {
   const { id } = useParams();
   const [loan, setLoan] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const fetchLoan = async () => {
     try {
@@ -24,8 +24,10 @@ const LoanDetail = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       setLoan(res.data);
+      setError(null);
     } catch (err) {
       console.error("Error fetching loan:", err);
+      setError("Failed to fetch loan data.");
     } finally {
       setLoading(false);
     }
@@ -36,27 +38,29 @@ const LoanDetail = () => {
   }, [id]);
 
   if (loading) return <div className="p-6">Loading...</div>;
+  if (error) return <div className="p-6 text-red-600">{error}</div>;
   if (!loan) return <div className="p-6">Loan not found</div>;
 
-  const role = localStorage.getItem("role"); // Use auth hook if available
+  const role = localStorage.getItem("role");
 
   return (
     <div className="p-6 max-w-2xl mx-auto bg-white shadow rounded">
       <h2 className="text-2xl font-semibold mb-4">Loan Details</h2>
       <p>
-        <strong>Status:</strong> {loan.status}
+        <strong>Status:</strong> {loan.status ?? "N/A"}
       </p>
       <p>
-        <strong>Amount:</strong> {money(loan.amount)}
+        <strong>Amount:</strong> {money(loan.amount ?? 0)}
       </p>
       <p>
-        <strong>Applied On:</strong> {fmt(loan.createdAt)}
+        <strong>Applied On:</strong>{" "}
+        {loan.createdAt ? fmt(loan.createdAt) : "N/A"}
       </p>
       <p>
-        <strong>Loan Term:</strong> {loan.term} months
+        <strong>Loan Term:</strong> {loan.term ?? "N/A"} months
       </p>
       <p>
-        <strong>Interest Rate:</strong> {loan.interestRate}%
+        <strong>Interest Rate:</strong> {loan.interestRate ?? "N/A"}%
       </p>
 
       {loan.sanctionLetterUrl && (
@@ -72,7 +76,6 @@ const LoanDetail = () => {
         </p>
       )}
 
-      {/* AI Decision Section */}
       <div className="mt-6 p-4 bg-gray-100 rounded">
         <h3 className="font-semibold mb-2">AI Credit Risk Assessment</h3>
         <p>
@@ -80,15 +83,14 @@ const LoanDetail = () => {
         </p>
         <p>
           <strong>Confidence Score:</strong>{" "}
-          {loan.aiDecision?.score?.toFixed(2) ?? "N/A"}
+          {loan.aiDecision?.score ? loan.aiDecision.score.toFixed(2) : "N/A"}
         </p>
       </div>
 
-      {/* Manual Override Section */}
       <div className="mt-6 p-4 bg-yellow-100 rounded">
         <h3 className="font-semibold mb-2">Manual Override</h3>
         {loan.manualOverride ? (
-          <div>
+          <>
             <p>
               <strong>Decision:</strong> {loan.manualOverride.overrideDecision}
             </p>
@@ -100,14 +102,16 @@ const LoanDetail = () => {
               {loan.manualOverride.overriddenBy || "Admin"}
             </p>
             <p>
-              <strong>At:</strong> {fmt(loan.manualOverride.overrideTimestamp)}
+              <strong>At:</strong>{" "}
+              {loan.manualOverride.overrideTimestamp
+                ? fmt(loan.manualOverride.overrideTimestamp)
+                : "N/A"}
             </p>
-          </div>
+          </>
         ) : (
           <p>No manual override applied yet.</p>
         )}
 
-        {/* Only show to admin */}
         {role === "admin" && (
           <ManualOverrideForm
             loanId={loan._id}
@@ -121,29 +125,37 @@ const LoanDetail = () => {
         <strong>Repayment Schedule:</strong>
       </p>
       <ul className="list-disc pl-5">
-        {loan.repaymentSchedule?.map((emi, i) => (
-          <li key={i}>
-            {fmt(emi.dueDate)} — {money(emi.amount)} — {emi.status}
-          </li>
-        ))}
+        {loan.repaymentSchedule?.length ? (
+          loan.repaymentSchedule.map((emi, i) => (
+            <li key={i}>
+              {fmt(emi.dueDate)} — {money(emi.amount)} — {emi.status}
+            </li>
+          ))
+        ) : (
+          <li>No repayment schedule found.</li>
+        )}
       </ul>
 
       <p className="mt-4">
         <strong>KYC Documents:</strong>
       </p>
       <ul>
-        {loan.kycDocs?.map((doc, i) => (
-          <li key={i}>
-            <a
-              href={doc.url}
-              className="text-blue-600"
-              target="_blank"
-              rel="noreferrer"
-            >
-              {doc.name}
-            </a>
-          </li>
-        ))}
+        {loan.kycDocs?.length ? (
+          loan.kycDocs.map((doc, i) => (
+            <li key={i}>
+              <a
+                href={doc.url}
+                className="text-blue-600"
+                target="_blank"
+                rel="noreferrer"
+              >
+                {doc.name}
+              </a>
+            </li>
+          ))
+        ) : (
+          <li>No KYC documents available.</li>
+        )}
       </ul>
     </div>
   );
